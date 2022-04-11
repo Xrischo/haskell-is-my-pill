@@ -9,9 +9,9 @@ import System.Environment
 %error { parseError }
 %token 
   READ     { TokenRead _ }
-	WHERE    { TokenWhere _ }
+  WHERE    { TokenWhere _ }
   SUBJ     { TokenSubj _ }
-	PRED     { TokenPred _ }
+  PRED     { TokenPred _ }
   OBJ      { TokenObj _ }
   AND      { TokenAnd _ }
   OR       { TokenOr _ }
@@ -23,17 +23,17 @@ import System.Environment
   CHANGE   { TokenChange _ }
   INSERT   { TokenInsert _ }
   '.'      { TokenDot _ }
-	'<'      { TokenLBrack _ }
-	'>'      { TokenRBrack _ }
-	'='      { TokenEq _ }
-	'('      { TokenLParen _ }
-	')'      { TokenRParen _ }
+  '<'      { TokenLBrack _ }
+  '>'      { TokenRBrack _ }
+  '='      { TokenEq _ }
+  '('      { TokenLParen _ }
+  ')'      { TokenRParen _ }
   '+'      { TokenPlus _ }
   '-'      { TokenMinus _ }
   file     { TokenFile _ $$ }
-	string   { TokenString _ $$ }
-	bool     { TokenBool _ $$ }
-	int      { TokenInt _ $$ }
+  string   { TokenString _ $$ }
+  bool     { TokenBool _ $$ }
+  int      { TokenInt _ $$ }
 
 %right AND OR WHERE
 %left '+' '-'
@@ -49,15 +49,15 @@ FileList : file FileList                                 { Files (File $1) $2 }
 
 Operation : WHERE Cond AND IfStmt                        { WhereSeq $2 $4 }
           | WHERE Cond                                   { Where $2 }
-		      | WHERE IfStmt                                 { WhereIf $2 }
+          | WHERE IfStmt                                 { WhereIf $2 }
 
 Cond : OperandEval '>' OperandEval                       { Gt $1 $3 }
-	   | OperandEval '>' '=' OperandEval                   { Gte $1 $4 }
+     | OperandEval '>' '=' OperandEval                   { Gte $1 $4 }
      | OperandEval '<' OperandEval                       { Lt $1 $3 }
-	   | OperandEval '<' '=' OperandEval                   { Lte $1 $4 }
-	   | Operand '=' Operand                               { Eql $1 $3 }
-	   | Cond AND Cond                                     { And $1 $3 }
-  	 | Cond OR Cond                                      { Or $1 $3 }
+     | OperandEval '<' '=' OperandEval                   { Lte $1 $4 }
+     | Operand '=' Operand                               { Eql $1 $3 }
+     | Cond AND Cond                                     { And $1 $3 }
+     | Cond OR Cond                                      { Or $1 $3 }
 	
 IfStmt : IF '(' Cond ')' THEN Action ELSE Action END     { IfElse $3 $6 $8 }
        | IF '(' Cond ')' THEN Action END                 { If $3 $6 }
@@ -69,23 +69,22 @@ NestedIf : IF '(' Cond ')' THEN Action ELSE Action END   { NIfElse $3 $6 $8 }
              
 Action : CHANGE Operand Operand Operand                  { Change $2 $3 $4 }
        | INSERT Operand Operand Operand                  { Insert $2 $3 $4 }
-	     | DROP                                            { Drop }
-	     | NestedIf                                        { NestIf $1}
+       | DROP                                            { Drop }
+       | NestedIf                                        { NestIf $1}
        | Action AND Action                               { SeqActs $1 $3 }
 
 Operand : file '.' SUBJ                                  { Subject $1 }
         | file '.' PRED                                  { Predicate $1 }
-	      | string                                         { String $1 }
-	    	| bool                                           { Bool $1 }
-	    	| OperandEval                                    { Eval $1 }
+	| string                                         { String $1 }
+	| bool                                           { Bool $1 }
+	| OperandEval                                    { Eval $1 }
 
 
 OperandEval : file '.' OBJ                               { Object $1 }
             | int                                        { Int $1 }
             | OperandEval '+' OperandEval                { Add $1 $3 }
             | OperandEval '-' OperandEval                { Subtract $1 $3 }
-			      | '(' '-' int ')'                            { Negate $3 }
-			
+	    | '(' '-' int ')'                            { Negate $3 }			
 			
 { 
 
@@ -128,7 +127,7 @@ data NestedIf = NIf Cond Action
 data Action = Change Operand Operand Operand
             | Insert Operand Operand Operand
             | Drop
-			      | NestIf NestedIf
+	    | NestIf NestedIf
             | SeqActs Action Action
             deriving Show
 
@@ -141,9 +140,9 @@ data Operand = Subject String
 
 data OperandEval = Object String
                  | Int Int
-				         | Negate Int
-				         | Add OperandEval OperandEval
-			         	 | Subtract OperandEval OperandEval
-				         deriving Show
+		 | Negate Int
+		 | Add OperandEval OperandEval
+		 | Subtract OperandEval OperandEval
+		 deriving Show
 
 } 
