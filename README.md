@@ -11,8 +11,8 @@ Run alex Tokens.x and happy Grammar.y in the same directory. Compile Stql.hs (gh
 Now you can pass files written in the language (Stql.exe rickroll.stql).
 
 Using the foo.ttl file, you can query things like:
-READ foo WHERE foo.OBJ < 50
-READ foo WHERE OBJ < 50 (same output, syntax sugar)
+READ foo WHERE foo.OBJ < 50 |
+READ foo WHERE OBJ < 50 (same output, syntax sugar) |
 READ foo WHERE IF (foo.OBJ < 50 AND foo.OBJ > 20) THEN CHANGE SUBJ foo.PRED OBJ+1 AND INSERT foo.SUBJ PRED false END
 
 etc. etc.
