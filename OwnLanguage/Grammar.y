@@ -67,8 +67,8 @@ IfStmt : IF '(' Cond ')' THEN Action ELSE Action END     { IfElse $3 $6 $8 }
 NestedIf : IF '(' Cond ')' THEN Action ELSE Action END   { NIfElse $3 $6 $8 }
          | IF '(' Cond ')' THEN Action END               { NIf $3 $6 }
              
-Action : CHANGE Operand Operand Operand                  { Change $2 $3 $4 }
-       | INSERT Operand Operand Operand                  { Insert $2 $3 $4 }
+Action : CHANGE OperandAct OperandAct OperandAct         { Change $2 $3 $4 }
+       | INSERT OperandAct OperandAct OperandAct         { Insert $2 $3 $4 }
        | DROP                                            { Drop }
        | NestedIf                                        { NestIf $1}
        | Action AND Action                               { SeqActs $1 $3 }
@@ -86,11 +86,41 @@ OperandEval : file '.' OBJ                               { Object $1 }
             | OperandEval '-' OperandEval                { Subtract $1 $3 }
 	    | '(' '-' int ')'                            { Negate $3 }			
 			
+OperandAct : SUBJ                                        { Subj }
+           | PRED                                        { Pred }
+	   | OBJ                                         { Obj }
+	   | Operand                                     { Oper $1 }
 { 
 
 parseError :: [Token] -> a
 parseError [] = error "Unknown Parse Error" 
-parseError (t:ts) = error ("Parse error at line:column " ++ (tokenPosn t))
+parseError (t@(TokenRead {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token READ \n\n")
+parseError (t@(TokenWhere {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token WHERE\n\n")
+parseError (t@(TokenSubj {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token SUBJ \n\n")
+parseError (t@(TokenPred {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token PRED\n\n")
+parseError (t@(TokenObj {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token OBJ\n\n")
+parseError (t@(TokenAnd {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token AND\n\n")
+parseError (t@(TokenOr {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token OR\n\n")
+parseError (t@(TokenIf {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token IF\n\n")
+parseError (t@(TokenThen {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token THEN\n\n")
+parseError (t@(TokenElse {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token ELSE\n\n")
+parseError (t@(TokenEnd {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token END\n\n")
+parseError (t@(TokenDrop {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token DROP\n\n")
+parseError (t@(TokenChange {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token CHANGE\n\n")
+parseError (t@(TokenInsert {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token INSERT\n\n")
+parseError (t@(TokenDot {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced dot '.'\n\n")
+parseError (t@(TokenLBrack {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced bracket '<'\n\n")
+parseError (t@(TokenRBrack {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced bracket '>'\n\n")
+parseError (t@(TokenEq {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token '='\n\n")
+parseError (t@(TokenLParen {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced left parenthesis '('\n\n")
+parseError (t@(TokenRParen {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced right parenthesis ')'\n\n")
+parseError (t@(TokenPlus {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token '+'\n\n")
+parseError (t@(TokenMinus {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced token '-'\n\n")
+parseError (t@(TokenFile {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced files\n\n")
+parseError (t@(TokenString {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced string\n\n")
+parseError (t@(TokenBool {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced bool\n\n")
+parseError (t@(TokenInt {}):ts) = error ("Parse error at line:column " ++ (tokenPosn t) ++ " -> Misplaced int\n\n")
+
 
 data Exp = ReadOp FileList Operation
          | Read FileList
@@ -124,8 +154,8 @@ data NestedIf = NIf Cond Action
               | NIfElse Cond Action Action
               deriving Show
 
-data Action = Change Operand Operand Operand
-            | Insert Operand Operand Operand
+data Action = Change OperandAct OperandAct OperandAct
+            | Insert OperandAct OperandAct OperandAct
             | Drop
 	    | NestIf NestedIf
             | SeqActs Action Action
@@ -144,5 +174,11 @@ data OperandEval = Object String
 		 | Add OperandEval OperandEval
 		 | Subtract OperandEval OperandEval
 		 deriving Show
+
+data OperandAct = Subj
+                | Pred
+		| Obj
+		| Oper Operand
+		deriving Show
 
 } 
