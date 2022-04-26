@@ -1,5 +1,6 @@
 -- WRITTEN BY HRISTIYAN GEORGIEV
 
+
 import Tokens
 import Grammar
 import Read
@@ -28,11 +29,11 @@ errCatch e = do
 unwrapAST :: Exp -> IO String
 unwrapAST (Read files) = do
   fileContent <- readTurtle files
-  return $ unzipTriples $ sortBy sortTriples $ concatMap (fromFileToTriples . snd) fileContent
+  return $ unzipTriples $ nub $ sortBy sortTriples $ concatMap (fromFileToTriples . snd) fileContent
 
 unwrapAST (ReadOp files op) = do
   fileContent <- readTurtle files
-  return $ unzipTriples $ sortBy sortTriples $ concatMap snd $ applyOp (map (\x -> (fst x, fromFileToTriples (snd x))) fileContent) op
+  return $ unzipTriples $ nub $ sortBy sortTriples $ concatMap snd $ applyOp (map (\x -> (fst x, fromFileToTriples (snd x))) fileContent) op
 
 unwrapAST (SeqExps a b) = do
   expEval1 <- unwrapAST a
@@ -172,8 +173,8 @@ doAction [] _ = []
 doAction triples Drop = []
 doAction triples (NestIf (NIf cond act)) = applyOp triples (WhereIf (If cond act))
 doAction triples (NestIf (NIfElse cond act1 act2)) = applyOp triples (WhereIf (IfElse cond act1 act2))
-doAction triples act@(SeqActs a1 a2) = unionTriplesRep (getChangedTriples triples act) (getInsertTriples triples act)
-doAction triples act = getVal triples act
+doAction triples act = unionTriplesRep (getChangedTriples triples act) (getInsertTriples triples act)
+--doAction triples act = getVal triples act
 
 --Get a list of all triples that are inserted within an action
 getInsertTriples :: [(String, [(String, String, String)])] -> Action -> [(String, [(String, String, String)])]
@@ -214,7 +215,7 @@ getVal' [] _ = []
 getVal' t@((ctxt,trs):triples) act@(Change subj pred obj) =
   (ctxt, map (\trip -> (getValueOf trip subj, getValueOf trip pred, getValueOf trip obj)) trs) : getVal' triples act
 getVal' t@((ctxt,trs):triples) act@(Insert subj pred obj) =
-  (ctxt, trs ++ map (\trip -> (getValueOf trip subj, getValueOf trip pred, getValueOf trip obj)) trs) : getVal' triples act
+  (ctxt, map (\trip -> (getValueOf trip subj, getValueOf trip pred, getValueOf trip obj)) trs) : getVal' triples act
 getVal' t _ = t -- Can't reach this state
 
 --Get the value of a single operand
