@@ -1,4 +1,4 @@
--- WRITTEN BY Hristiyan Georgiev
+- WRITTEN BY HRISTIYAN GEORGIEV
 
 import Tokens
 import Grammar
@@ -28,11 +28,11 @@ errCatch e = do
 unwrapAST :: Exp -> IO String
 unwrapAST (Read files) = do
   fileContent <- readTurtle files
-  return $ unzipTriples $ sort $ concatMap (fromFileToTriples . snd) fileContent
+  return $ unzipTriples $ sortBy sortTriples $ concatMap (fromFileToTriples . snd) fileContent
 
 unwrapAST (ReadOp files op) = do
   fileContent <- readTurtle files
-  return $ unzipTriples $ sort $ concatMap snd $ applyOp (map (\x -> (fst x, fromFileToTriples (snd x))) fileContent) op
+  return $ unzipTriples $ sortBy sortTriples $ concatMap snd $ applyOp (map (\x -> (fst x, fromFileToTriples (snd x))) fileContent) op
 
 unwrapAST (SeqExps a b) = do
   expEval1 <- unwrapAST a
@@ -199,11 +199,13 @@ getVal triples act@(Change subj pred obj)
   | length triples > 1 && isNonContext subj = error $ "Ambiguous CHANGE SUBJECT query, number of contexts: " ++ show (length triples)
   | length triples > 1 && isNonContext pred = error $ "Ambiguous CHANGE PREDICATE query, number of contexts: " ++ show (length triples)
   | length triples > 1 && isNonContext obj = error $ "Ambiguous CHANGE OBJECT query, number of contexts: " ++ show (length triples)
+  | declNotURI subj || declNotURI pred = error "Bad CHANGE query: SUBJECT and PREDICATE declarations must be of URI format"
   | otherwise = getVal' triples act
 getVal triples act@(Insert subj pred obj)
   | length triples > 1 && isNonContext subj = error $ "Ambiguous INSERT SUBJECT query, number of contexts: " ++ show (length triples)
   | length triples > 1 && isNonContext pred = error $ "Ambiguous INSERT PREDICATE query, number of contexts: " ++ show (length triples)
   | length triples > 1 && isNonContext obj = error $ "Ambiguous INSERT OBJECT query, number of contexts: " ++ show (length triples)
+  | declNotURI subj || declNotURI pred = error "Bad INSERT query: SUBJECT and PREDICATE declarations must be of URI format"
   | otherwise = getVal' triples act
 getVal triples _ = triples -- Can't reach this state
 
@@ -212,7 +214,7 @@ getVal' [] _ = []
 getVal' t@((ctxt,trs):triples) act@(Change subj pred obj) =
   (ctxt, map (\trip -> (getValueOf trip subj, getValueOf trip pred, getValueOf trip obj)) trs) : getVal' triples act
 getVal' t@((ctxt,trs):triples) act@(Insert subj pred obj) =
-  (ctxt, map (\trip -> (getValueOf trip subj, getValueOf trip pred, getValueOf trip obj)) trs) : getVal' triples act
+  (ctxt, trs ++ map (\trip -> (getValueOf trip subj, getValueOf trip pred, getValueOf trip obj)) trs) : getVal' triples act
 getVal' t _ = t -- Can't reach this state
 
 --Get the value of a single operand
@@ -272,6 +274,22 @@ isInt :: String -> Bool
 isInt [] = False
 isInt n | all isDigit n || head n == '-' && all isDigit (tail n)  = True
         | otherwise     = False
+
+isBool :: String -> Bool
+isBool "true" = True
+isBool "false" = True
+isBool _ = False
+
+isURI :: String -> Bool
+isURI str | take 8 str == "<http://" && last str == '>' = True
+          | otherwise                                   = False
+
+declNotURI :: OperandAct -> Bool
+declNotURI (Oper (String str)) = not $ isURI $ removeQuotes str
+declNotURI _ = False
+
+isLiteral :: String -> Bool
+isLiteral str = not (isInt str) && not (isBool str) && not (isURI str)
 
 readInt :: String -> Int
 readInt = read
@@ -338,3 +356,16 @@ removeQuotes [] = []
 removeQuotes [x] = [x]
 removeQuotes str | head str == '\"' && last str == '\"' = tail $ init str
                  | otherwise                            = str
+
+sortTriples :: (String, String, String) -> (String, String, String) -> Ordering
+sortTriples t1@(s1, p1, o1) t2@(s2, p2, o2) | s1 == s2 && p1 == p2 = sortObj o1 o2
+                                            | otherwise            = compare t1 t2
+
+sortObj :: String -> String -> Ordering
+sortObj o1 o2 | isURI o1 && isURI o2 = compare o1 o2
+              | isURI o1             = LT
+              | isURI o2             = GT
+              | isLiteral o1 && isLiteral o2 = compare o1 o2
+              | isLiteral o1                 = GT
+              | isLiteral o2                 = LT
+              | otherwise                    = compare o1 o2
