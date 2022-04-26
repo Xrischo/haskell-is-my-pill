@@ -1,4 +1,4 @@
-- WRITTEN BY HRISTIYAN GEORGIEV
+-- WRITTEN BY HRISTIYAN GEORGIEV
 
 import Tokens
 import Grammar
